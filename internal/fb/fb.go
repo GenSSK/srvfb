@@ -47,6 +47,12 @@ func Open(dev string) (*Device, error) {
 		return nil, fmt.Errorf("FBIOGET_FSCREENINFO: %v", eno)
 	}
 
+	//var xlen = d.finfo.Line_length
+	var length = vinfo.Xres_virtual * vinfo.Yres_virtual
+	//var depth = vinfo.Bits_per_pixel
+	var size = length * length / 8
+	//var width = xlen * 8 / depth
+
 	d.mmap, err = unix.Mmap(fd, 0, int(d.finfo.Smem_len), unix.PROT_READ|unix.PROT_WRITE, unix.MAP_SHARED)
 	if err != nil {
 		unix.Close(fd)
@@ -58,6 +64,9 @@ func Open(dev string) (*Device, error) {
 func (d *Device) VarScreeninfo() (VarScreeninfo, error) {
 	var vinfo VarScreeninfo
 	_, _, eno := unix.Syscall(unix.SYS_IOCTL, d.fd, FBIOGET_VSCREENINFO, uintptr(unsafe.Pointer(&vinfo)))
+	//println(vinfo.Xres_virtual) //1920
+	//println(vinfo.Yres_virtual) //1080
+	//println(vinfo.Bits_per_pixel) //32
 	if eno != 0 {
 		return vinfo, fmt.Errorf("FBIOGET_VSCREENINFO: %v", eno)
 	}
@@ -69,11 +78,15 @@ func (d *Device) Image() (image.Image, error) {
 	if err != nil {
 		return nil, err
 	}
-	if vinfo.Bits_per_pixel != 16 {
+	if vinfo.Bits_per_pixel != 32 {
 		return nil, fmt.Errorf("%d bits per pixel unsupported", vinfo.Bits_per_pixel)
 	}
 	virtual := image.Rect(0, 0, int(vinfo.Xres_virtual), int(vinfo.Yres_virtual))
-	if virtual.Dx()*virtual.Dy()*2 != len(d.mmap) {
+	println(len(d.mmap))
+	//println(virtual.Dx() * virtual.Dy() * 2)
+
+	//if virtual.Dx()*virtual.Dy()*2 != len(d.mmap) {
+	if int(size) != len(d.mmap) {
 		return nil, errors.New("virtual resolution doesn't match framebuffer size")
 	}
 	visual := image.Rect(int(vinfo.Xoffset), int(vinfo.Yoffset), int(vinfo.Xres), int(vinfo.Yres))
