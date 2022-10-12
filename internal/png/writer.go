@@ -338,6 +338,7 @@ func (e *encoder) writeImage(w io.Writer, m image.Image, cb int, level int) erro
 	case cbG16:
 		bitsPerPixel = 16
 	}
+	println("Running")
 
 	// cr[*] and pr are the bytes for the current and previous row.
 	// cr[0] is unfiltered (or equivalently, filtered with the ftNone filter).
@@ -513,6 +514,8 @@ func (e *encoder) writeImage(w io.Writer, m image.Image, cb int, level int) erro
 			f = filter(&cr, pr, bpp)
 		}
 
+		//println("no Running")
+
 		// Write the compressed bytes.
 		if _, err := e.zw.Write(cr[f]); err != nil {
 			return err
@@ -534,7 +537,9 @@ func (e *encoder) writeIDATs() {
 	} else {
 		e.bw.Reset(e)
 	}
+	println("Running")
 	e.err = e.writeImage(e.bw, e.m, e.cb, levelToZlib(e.enc.CompressionLevel))
+	println("no Running")
 	if e.err != nil {
 		return
 	}
@@ -635,7 +640,9 @@ func (enc *Encoder) Encode(w io.Writer, m image.Image) error {
 	if pal != nil {
 		e.writePLTEAndTRNS(pal)
 	}
+	println("Running")
 	e.writeIDATs()
+	println("no Running")
 	e.writeIEND()
 	return e.err
 }

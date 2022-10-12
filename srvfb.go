@@ -151,7 +151,7 @@ func (h *handler) serveRaw(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//im := new(image.Image)
-	im := new(image.RGBA)
+	im := new(image.RGBA64)
 	if err := h.readImage(im); err != nil {
 		log.Println(err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -223,7 +223,7 @@ func (h *handler) serveVideo(w http.ResponseWriter, r *http.Request) {
 
 	var reader interface {
 		//readImage(im *image.Gray16) error
-		readImage(im *image.RGBA) error
+		readImage(im *image.RGBA64) error
 	}
 
 	if h.proxy != "" {
@@ -247,7 +247,7 @@ func (h *handler) serveVideo(w http.ResponseWriter, r *http.Request) {
 	hdr := make(textproto.MIMEHeader)
 	hdr.Add("Content-Type", "image/png")
 	//im := new(image.Gray16)
-	im := new(image.RGBA)
+	im := new(image.RGBA64)
 	enc := &png.Encoder{CompressionLevel: png.BestSpeed}
 	var dedup deduper
 	for {
@@ -271,7 +271,7 @@ func (h *handler) serveVideo(w http.ResponseWriter, r *http.Request) {
 
 func (h *handler) serveImage(w http.ResponseWriter, r *http.Request) {
 	var reader interface {
-		readImage(im *image.RGBA) error
+		readImage(im *image.RGBA64) error
 		//readImage(im *image.Gray16) error
 	}
 
@@ -289,7 +289,7 @@ func (h *handler) serveImage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//im := new(image.Gray16)
-	im := new(image.RGBA)
+	im := new(image.RGBA64)
 	if err := reader.readImage(im); err != nil {
 		log.Println(err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -371,14 +371,14 @@ func (h *handler) serveIndex(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, idx)
 }
 
-func (h *handler) readImage(im *image.RGBA) error {
+func (h *handler) readImage(im *image.RGBA64) error {
 	//func (h *handler) readImage(im *image.Gray16) error {
 	vim, err := h.fb.Image()
 	if err != nil {
 		return err
 	}
 	//gim, ok := vim.(*image.Gray16)
-	gim, ok := vim.(*image.RGBA)
+	gim, ok := vim.(*image.RGBA64)
 	if !ok {
 		//return errors.New("framebuffer is not 16-bit grayscale")
 		return errors.New("?????????????????????????????")
@@ -456,10 +456,10 @@ func (c *proxyconn) readHdr(resp *http.Response) error {
 }
 
 // func (c *proxyconn) readImage(im *image.Gray16) error {
-func (c *proxyconn) readImage(im *image.RGBA) error {
+func (c *proxyconn) readImage(im *image.RGBA64) error {
 	if len(im.Pix) != c.stride*c.height {
 		//*im = image.Gray16{
-		*im = image.RGBA{
+		*im = image.RGBA64{
 			Pix:    make([]byte, c.stride*c.height),
 			Stride: c.stride,
 			Rect:   image.Rect(0, 0, c.width, c.height),

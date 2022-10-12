@@ -47,13 +47,18 @@ func Open(dev string) (*Device, error) {
 		return nil, fmt.Errorf("FBIOGET_FSCREENINFO: %v", eno)
 	}
 
+	vinfo, err := d.VarScreeninfo()
+
 	//var xlen = d.finfo.Line_length
 	var length = vinfo.Xres_virtual * vinfo.Yres_virtual
-	//var depth = vinfo.Bits_per_pixel
-	var size = length * length / 8
+	var depth = vinfo.Bits_per_pixel
+	var size = length * depth / 8
 	//var width = xlen * 8 / depth
 
-	d.mmap, err = unix.Mmap(fd, 0, int(d.finfo.Smem_len), unix.PROT_READ|unix.PROT_WRITE, unix.MAP_SHARED)
+	d.mmap, err = unix.Mmap(fd, 0, int(size), unix.PROT_READ|unix.PROT_WRITE, unix.MAP_SHARED)
+	println(len(d.mmap))
+	//d.mmap, err = unix.Mmap(fd, 0, int(d.finfo.Smem_len), unix.PROT_READ|unix.PROT_WRITE, unix.MAP_SHARED)
+	//println(len(d.mmap))
 	if err != nil {
 		unix.Close(fd)
 		return nil, fmt.Errorf("mmap: %v", err)
@@ -78,25 +83,40 @@ func (d *Device) Image() (image.Image, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	var xlen = d.finfo.Line_length
+	var length = vinfo.Xres_virtual * vinfo.Yres_virtual
+	var depth = vinfo.Bits_per_pixel
+	var width = xlen * 8 / depth
+	//var size = length * depth / 8
+
 	if vinfo.Bits_per_pixel != 32 {
 		return nil, fmt.Errorf("%d bits per pixel unsupported", vinfo.Bits_per_pixel)
 	}
 	virtual := image.Rect(0, 0, int(vinfo.Xres_virtual), int(vinfo.Yres_virtual))
-	println(len(d.mmap))
-	//println(virtual.Dx() * virtual.Dy() * 2)
+	//println(len(d.mmap))
+	println(virtual.Dx() * virtual.Dy() * 4)
 
-	//if virtual.Dx()*virtual.Dy()*2 != len(d.mmap) {
-	if int(size) != len(d.mmap) {
+	if virtual.Dx()*virtual.Dy()*4 != len(d.mmap) {
+		//if int(size) != len(d.mmap) {
 		return nil, errors.New("virtual resolution doesn't match framebuffer size")
 	}
+	println(vinfo.Xoffset)
+	println(vinfo.Yoffset)
+	println(vinfo.Xres)
+	println(vinfo.Yres)
+	println(width)
+	//visual := image.Rect(int(vinfo.Xoffset), int(vinfo.Yoffset), int(width), int(vinfo.Yres))
 	visual := image.Rect(int(vinfo.Xoffset), int(vinfo.Yoffset), int(vinfo.Xres), int(vinfo.Yres))
 	if !visual.In(virtual) {
 		return nil, errors.New("visual resolution not contained in virtual resolution")
 	}
-	return &image.Gray16{
+	//return &image.Gray16{
+	return &image.RGBA64{
 		Pix:    d.mmap,
-		Stride: int(d.finfo.Line_length),
-		Rect:   visual,
+		Stride: int(length),
+		//Stride: int(d.finfo.Line_length),
+		Rect: visual,
 	}, nil
 }
 
